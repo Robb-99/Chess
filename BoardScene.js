@@ -53,9 +53,9 @@ class BoardScene extends Phaser.Scene {
 	}
 
 	getClickedTile(event){
-		for(let i = 0; i < this.boardMatrix.length; i++){
-			for(let d = 0; d < this.boardMatrix[i].length; d++){
-				if((this.boardMatrix[i][d].x > event.x + (TILE_SIZE / 2) || this.boardMatrix[i][d].x > event.x - (TILE_SIZE / 2)) && (this.boardMatrix[i][d].y > event.y + (TILE_SIZE / 2) || this.boardMatrix[i][d].y > event.y - (TILE_SIZE / 2))) return this.boardMatrix[i][d];
+		for(let row of this.boardMatrix){
+			for(let tile of row){
+				if((tile.x > event.x + (TILE_SIZE / 2) || tile.x > event.x - (TILE_SIZE / 2)) && (tile.y > event.y + (TILE_SIZE / 2) || tile.y > event.y - (TILE_SIZE / 2))) return tile;
 			}
 		}
 		return null;
