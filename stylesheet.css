@@ -1,0 +1,9 @@
+body {
+  text-align: center;
+}
+
+.test {
+  text-align: left;
+  margin: 0 auto;
+  border: 5px solid green;
+}
