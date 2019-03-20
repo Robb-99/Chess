@@ -3,6 +3,7 @@ class Figure{
 		this.positionX = positionX;
 		this.positionY = positionY;
 		this.team = team;
+		this.type = this.constructor.name;
 	}
 	determineMovePossibilities(){
 		//throw new Error('Need to implement this method!');

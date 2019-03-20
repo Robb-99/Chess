@@ -53,21 +53,61 @@ class BoardScene extends Phaser.Scene {
 				this.add.sprite(tile.x, tile.y, tile.ground);
 			})
 		})
-		this.startLineup();
+		this.startLineup(this.player1);
+		this.startLineup(this.player2);
+
 		this.focus = this.add.sprite(10000, 10000, 'focus');
 		this.focus.alpha -= 0.7;
 		this.input.on('pointerdown', event => {
 			let clickedTile = this.getClickedTile(event);
-			if(clickedTile === null || clickedTile === this.focusedTile || clickedTile.figure === null){
+			if(clickedTile === null || clickedTile.figure === null){
 				this.focus.x = 10000;
 				this.focus.y = 10000;
+				this.focusedTile = null;
 				document.getElementById('focus').innerHTML = null;
 				return;
 			}
 			this.focus.x = clickedTile.x;
 			this.focus.y = clickedTile.y;
 			this.focusedTile = clickedTile;
-			document.getElementById('focus').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.player + "</b>";
+			document.getElementById('focus').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.figure.team + "</b> auf Feld <b>" + this.focusedTile.designation + "</b>";
+		})
+
+		/*
+		 * TODO: Fixing this
+		 * Experimental drag-and-drop function
+		 * Deactivated as it breaks everything apart
+		 * Uncomment line 85 to activate
+		 */
+		this.boardMatrix.forEach(row => {
+			row.forEach(tile => {
+				if(tile.figure !== null){
+					//tile.figure.sprite.setInteractive({draggable: true});
+					tile.figure.sprite.on('drag', (pointer, dragX, dragY) => {
+						tile.figure.sprite.x = dragX;
+						tile.figure.sprite.y = dragY;
+						let hoverTile = this.getClickedTile({x: dragX, y: dragY});
+						if(hoverTile === null) return;
+						this.focus.x = hoverTile.x;
+						this.focus.y = hoverTile.y;
+					})
+					tile.figure.sprite.on('pointerup', event => {
+						let hovered = this.getClickedTile(event);
+						if(hovered === null || hovered.figure === tile.figure){
+							console.log("Das selbe Feld oder nicht gültiger Bereich. Setze zurück auf Feld " + tile.designation);
+							tile.figure.sprite.x = tile.x;
+							tile.figure.sprite.y = tile.y;
+							return;
+						}
+						if(hovered.figure !== null){
+							console.log("Feld belegt. Resette auf das Feld " + tile.designation);
+							tile.figure.sprite.x = tile.x;
+							tile.figure.sprite.x = tile.y;
+							return;
+						}
+					})
+				}
+			})
 		})
 	}
 
@@ -81,22 +121,12 @@ class BoardScene extends Phaser.Scene {
 		return null;
 	}
 
-	startLineup(){
-		Object.values(this.player1.figureList).forEach(type => {
+	startLineup(player){
+		Object.values(player.figureList).forEach(type => {
 			type.forEach(figure => {
 				this.boardMatrix[figure.positionY][figure.positionX].figure = {
 					sprite: this.add.sprite(this.boardMatrix[figure.positionY][figure.positionX].x, this.boardMatrix[figure.positionY][0].y, figure.asset),
-					type: figure.constructor.name,
-					player: figure.team
-				};
-			})
-		})
-		Object.values(this.player2.figureList).forEach(type => {
-			type.forEach(figure => {
-				this.boardMatrix[figure.positionY][figure.positionX].figure = {
-					sprite: this.add.sprite(this.boardMatrix[figure.positionY][figure.positionX].x, this.boardMatrix[figure.positionY][0].y, figure.asset),
-					type: figure.constructor.name,
-					player: figure.team
+					figure: figure
 				};
 			})
 		})
