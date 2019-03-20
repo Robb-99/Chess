@@ -9,6 +9,7 @@
 	<script src="Game.js"></script>
 </head>
 <body>
+	<div id="main"></div>
 	<p id="focus"></p>
 </body>
 </html>

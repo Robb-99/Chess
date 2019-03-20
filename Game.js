@@ -2,7 +2,8 @@ const config = {
 	type: Phaser.AUTO,
 	width: 600,
 	height: 600,
-	scene: [BoardScene]
+	scene: [BoardScene],
+	parent: "main"
 };
 
 let game = new Phaser.Game(config); 
