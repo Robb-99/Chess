@@ -31,6 +31,8 @@ class BoardScene extends Phaser.Scene {
 					var recentGround = (d % 2 === 0) ? 'brownTile' : 'whiteTile';
 				}
 				this.boardMatrix[i][d] = {
+					indX: d,
+					indY: i,
 					x: recentX,
 					y: recentY,
 					ground: recentGround,
@@ -58,30 +60,54 @@ class BoardScene extends Phaser.Scene {
 
 		this.focus = this.add.sprite(10000, 10000, 'focus');
 		this.focus.alpha -= 0.7;
+		this.focusedTile = null;
 		this.input.on('pointerdown', event => {
 			let clickedTile = this.getClickedTile(event);
-			if(clickedTile === null || clickedTile.figure === null){
-				this.focus.x = 10000;
-				this.focus.y = 10000;
-				this.focusedTile = null;
-				document.getElementById('focus').innerHTML = null;
+			if(clickedTile === "Out of bounds"){
+				this.defocus();
+				document.getElementById('feedback').innerHTML = null;
 				return;
 			}
+			else if(clickedTile.figure === null && this.focusedTile !== null){
+				this.move(clickedTile);
+				return;
+			}
+			else if (clickedTile.figure === null) return;
 			this.focus.x = clickedTile.x;
 			this.focus.y = clickedTile.y;
 			this.focusedTile = clickedTile;
-			document.getElementById('focus').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.figure.team + "</b> auf Feld <b>" + this.focusedTile.designation + "</b>";
+			document.getElementById('feedback').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.figure.team + "</b> auf Feld <b>" + this.focusedTile.designation + "</b>";
 		})
 	}
 
 	getClickedTile(event){
-		if(event.x < BORDER_SIZE + RELATIVE_BORDER_POSITION || event.y < BORDER_SIZE  + RELATIVE_BORDER_POSITION) return null;
+		if(event.x < BORDER_SIZE + RELATIVE_BORDER_POSITION || event.y < BORDER_SIZE  + RELATIVE_BORDER_POSITION) return "Out of bounds";
 		for(let row of this.boardMatrix){
 			for(let tile of row){
 				if((tile.x > event.x + (TILE_SIZE / 2) || tile.x > event.x - (TILE_SIZE / 2)) && (tile.y > event.y + (TILE_SIZE / 2) || tile.y > event.y - (TILE_SIZE / 2))) return tile;
 			}
 		}
-		return null;
+		return "Out of bounds";
+	}
+
+	/*
+	 Updates the matrix and moves the sprite
+	 @param clickedTile: Tile the user wants to move the figure
+	 */
+	move(clickedTile){
+		this.focusedTile.figure.figure.move(clickedTile.indX, clickedTile.indY);
+		clickedTile.figure = this.focusedTile.figure;
+		this.focusedTile.figure = null;
+		clickedTile.figure.sprite.x = this.boardMatrix[clickedTile.figure.figure.positionY][clickedTile.figure.figure.positionX].x;
+		clickedTile.figure.sprite.y = this.boardMatrix[clickedTile.figure.figure.positionY][clickedTile.figure.figure.positionX].y;
+		this.defocus();
+		document.getElementById('feedback').innerHTML = clickedTile.figure.figure.type + "</b> von <b> Spieler" + clickedTile.figure.figure.team + "</b> auf Feld <b>" + clickedTile.designation + "</b> verschoben!";
+	}
+
+	defocus(){
+		this.focus.x = 10000;
+		this.focus.y = 10000;
+		this.focusedTile = null;
 	}
 
 	startLineup(player){

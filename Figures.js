@@ -5,8 +5,10 @@ class Figure{
 		this.team = team;
 		this.type = this.constructor.name;
 	}
-	determineMovePossibilities(){
-		//throw new Error('Need to implement this method!');
+
+	move(x, y){
+		this.positionX = x;
+		this.positionY = y;
 	}
 }
 

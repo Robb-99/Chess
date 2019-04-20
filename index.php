@@ -10,6 +10,6 @@
 </head>
 <body>
 	<div id="main"></div>
-	<p id="focus"></p>
+	<p id="feedback"></p>
 </body>
 </html>
