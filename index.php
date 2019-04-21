@@ -5,11 +5,14 @@
 	<link rel="stylesheet" type="text/css" href="stylesheet.css">
 	<script src="//cdn.jsdelivr.net/npm/phaser@3.16.2/dist/phaser.js"></script>
 	<script src="Figures.js"></script>
-	<script src="BoardScene.js"></script>
+	<script src="LocalGame.js"></script>
 	<script src="Game.js"></script>
 </head>
 <body>
-	<div id="main"></div>
-	<p id="feedback"></p>
+	<p id="turn">.</p>
+	<span id="main"></span>
+	<p id="turn"></p>
+	<p id="focus"></p>
+	<p id="lastTurn"></p>
 </body>
 </html>

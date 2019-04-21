@@ -1,6 +1,6 @@
 class BoardScene extends Phaser.Scene {
 	constructor(){
-		super({key: "BoardScene"});
+		super({key: "LocalGame"});
 	}
 	preload(){
 		this.player1 = new Player(1);
@@ -57,6 +57,7 @@ class BoardScene extends Phaser.Scene {
 		})
 		this.startLineup(this.player1);
 		this.startLineup(this.player2);
+		this.setPlayerTurn(1);
 
 		this.focus = this.add.sprite(10000, 10000, 'focus');
 		this.focus.alpha -= 0.7;
@@ -65,18 +66,14 @@ class BoardScene extends Phaser.Scene {
 			let clickedTile = this.getClickedTile(event);
 			if(clickedTile === "Out of bounds"){
 				this.defocus();
-				document.getElementById('feedback').innerHTML = null;
 				return;
 			}
-			else if(clickedTile.figure === null && this.focusedTile !== null){
+			else if(this.focusedTile !== null && clickedTile.figure === null){
 				this.move(clickedTile);
 				return;
 			}
-			else if (clickedTile.figure === null) return;
-			this.focus.x = clickedTile.x;
-			this.focus.y = clickedTile.y;
-			this.focusedTile = clickedTile;
-			document.getElementById('feedback').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.figure.team + "</b> auf Feld <b>" + this.focusedTile.designation + "</b>";
+			else if (clickedTile.figure === null || clickedTile.figure.figure.team !== this.turn) return;
+			this.focusFigure(clickedTile);
 		})
 	}
 
@@ -101,13 +98,28 @@ class BoardScene extends Phaser.Scene {
 		clickedTile.figure.sprite.x = this.boardMatrix[clickedTile.figure.figure.positionY][clickedTile.figure.figure.positionX].x;
 		clickedTile.figure.sprite.y = this.boardMatrix[clickedTile.figure.figure.positionY][clickedTile.figure.figure.positionX].y;
 		this.defocus();
-		document.getElementById('feedback').innerHTML = clickedTile.figure.figure.type + "</b> von <b> Spieler" + clickedTile.figure.figure.team + "</b> auf Feld <b>" + clickedTile.designation + "</b> verschoben!";
+		document.getElementById('lastTurn').innerHTML = "<b>" + clickedTile.figure.figure.type + "</b> von <b> Spieler" + clickedTile.figure.figure.team + "</b> auf Feld <b>" + clickedTile.designation + "</b> verschoben!";
+		this.turn === 1 ? this.setPlayerTurn(2) : this.setPlayerTurn(1);
+		console.log(this.boardMatrix);
+	}
+
+	focusFigure(clickedTile){
+		this.focus.x = clickedTile.x;
+		this.focus.y = clickedTile.y;
+		this.focusedTile = clickedTile;
+		document.getElementById('focus').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.figure.team + "</b> auf Feld <b>" + this.focusedTile.designation + "</b>";
 	}
 
 	defocus(){
 		this.focus.x = 10000;
 		this.focus.y = 10000;
 		this.focusedTile = null;
+		document.getElementById('focus').innerHTML = null;
+	}
+
+	setPlayerTurn(number){
+		this.turn = number;
+		document.getElementById('turn').innerHTML = "Aktueller Spieler: <b> Spieler " + this.turn;
 	}
 
 	startLineup(player){
