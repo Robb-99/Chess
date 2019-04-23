@@ -4,11 +4,17 @@ class Figure{
 		this.positionY = positionY;
 		this.team = team;
 		this.type = this.constructor.name;
+		this.moveCount = 0;
+	}
+
+	determineMovePossibilities(){
+		throw new Error("Class " + this.type + " lacks in implentation of this method!");
 	}
 
 	move(x, y){
 		this.positionX = x;
 		this.positionY = y;
+		this.moveCount++;
 	}
 }
 
@@ -17,6 +23,19 @@ class Peasant extends Figure{
 		super(positionX, positionY, team);
 		//this.asset = (this.team === 1) ? 'whitePeasant' : 'blackPeasant';
 		this.asset = 'whitePeasant';
+	}
+
+	determineMovePossibilities(){
+		if(this.moveCount === 0){
+			return {
+				x: 0,
+				y: 2
+			};
+		}
+		return {
+			x: 0,
+			y: 1
+		};
 	}
 }
 

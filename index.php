@@ -11,7 +11,6 @@
 <body>
 	<p id="turn">.</p>
 	<span id="main"></span>
-	<p id="turn"></p>
 	<p id="focus"></p>
 	<p id="lastTurn"></p>
 </body>
