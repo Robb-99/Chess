@@ -46,7 +46,8 @@ class LocalGame extends Phaser.Scene {
 					ground: recentGround,
 					designation: tileDesignation,
 					figure: null,
-					moveable: false
+					moveable: false,
+					threatenedBy: new Array()
 				};
 				recentX += TILE_SIZE;
 				tileDesignation = tileDesignation[0] + String.fromCharCode(tileDesignation.charCodeAt(1) + 1);
@@ -74,6 +75,7 @@ class LocalGame extends Phaser.Scene {
 		this.input.on('pointerdown', event => {
 			let clickedTile = this.getClickedTile(event);
 			//Triggers when the user clicks out of the field
+			console.log(clickedTile);
 			if(clickedTile === "Out of bounds"){
 				this.defocus();
 				return;
@@ -109,104 +111,110 @@ class LocalGame extends Phaser.Scene {
 	}
 
 	/*
-	 Updates the matrix and moves the sprite
-	 @param clickedTile: Tile the user wants to move the figure
-	 */
-	 move(newTile){
-	 	let isTransforming = this.focusedTile.figure.figure.move(newTile.indX, newTile.indY);
-	 	newTile.figure = this.focusedTile.figure;
-	 	this.focusedTile.figure = null;
-	 	newTile.figure.sprite.x = this.boardMatrix[newTile.figure.figure.positionY][newTile.figure.figure.positionX].x;
-	 	newTile.figure.sprite.y = this.boardMatrix[newTile.figure.figure.positionY][newTile.figure.figure.positionX].y;
-	 	this.defocus();
+	Updates the matrix and moves the sprite
+	@param clickedTile: Tile the user wants to move the figure
+	*/
+	move(newTile){
+		let isTransforming = this.focusedTile.figure.figure.move(newTile.indX, newTile.indY);
+		newTile.figure = this.focusedTile.figure;
+		this.focusedTile.figure = null;
+		newTile.figure.sprite.x = this.boardMatrix[newTile.figure.figure.positionY][newTile.figure.figure.positionX].x;
+		newTile.figure.sprite.y = this.boardMatrix[newTile.figure.figure.positionY][newTile.figure.figure.positionX].y;
+		this.defocus();
 
-	 	if(isTransforming){
-	 		newTile.figure.figure.transform();
-	 	}
+		if(isTransforming){
+			newTile.figure.figure.transform();
+		}
+		document.getElementById("player" + this.turn).innerHTML += "<li>Moved " + newTile.figure.figure.type + " on field " + newTile.designation;
+		this.clearThreat();
+		this.determineThreat(this.player1);
+		this.determineThreat(this.player2);
+		this.changePlayerTurn();
+	}
 
-	 	document.getElementById('lastTurn').innerHTML = "<b>" + newTile.figure.figure.type + "</b> von <b> Spieler" + newTile.figure.figure.team + "</b> auf Feld <b>" + newTile.designation + "</b> verschoben!";
-	 	this.changePlayerTurn();
-	 }
+	focusFigure(clickedTile){
+		this.defocus();
+		this.focus.x = clickedTile.x;
+		this.focus.y = clickedTile.y;
+		this.focusedTile = clickedTile;
+		this.moveableTile(this.focusedTile.figure.figure);
+	}
 
-	 focusFigure(clickedTile){
-	 	this.defocus();
-	 	this.focus.x = clickedTile.x;
-	 	this.focus.y = clickedTile.y;
-	 	this.focusedTile = clickedTile;
-	 	this.moveableTile(this.focusedTile.figure.figure);
-	 	document.getElementById('focus').innerHTML = "Im Fokus: <b>" + this.focusedTile.figure.figure.type + "</b> von <b> Spieler" + this.focusedTile.figure.figure.team + "</b> auf Feld <b>" + this.focusedTile.designation + "</b>";
-	 }
+	moveableTile(figure){
+		let moveable = figure.determineMovePossibilities();
+		this.moveableSprites = new Array();
+		this.hitmarker = new Array();
+		let x = this["player" + figure.team]["apply" + figure.type + "Possibilities"]();
+		x.call(this, figure, moveable, tile =>{
+			tile.moveable = true;
+			this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+		}, tile =>{
+			tile.figure.figure.hitable = true;
+			this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+		});
+		this.transparentMarker();
+	}
 
-	 moveableTile(figure){
-	 	let moveable = figure.determineMovePossibilities();
-	 	this.moveableSprites = new Array();
-	 	this.hitmarker = new Array();
-	 	let x = this["player" + figure.team]["apply" + figure.type + "Possibilities"]();
-	 	x.call(this, figure, moveable);
-	 	this.transparentMarker();
-	 }
+	defocus(){
+		if(this.focusedTile === null) return;
 
-	 defocus(){
-	 	if(this.focusedTile === null) return;
+		this.focus.x = 10000;
+		this.focus.y = 10000;
+		this.focusedTile = null;
 
-	 	this.focus.x = 10000;
-	 	this.focus.y = 10000;
-	 	this.focusedTile = null;
-	 	document.getElementById('focus').innerHTML = null;
+		this.boardMatrix.forEach(row => {
+			row.forEach(tile => {
+				tile.moveable = false;
+			})
+		})
 
-	 	this.boardMatrix.forEach(row => {
-	 		row.forEach(tile => {
-	 			tile.moveable = false;
-	 		})
-	 	})
+		this.boardMatrix.forEach(row => {
+			row.forEach(tile => {
+				if (tile.figure !== null){
+					tile.figure.figure.hitable = false;
+				}
+			})
+		})
 
-	 	this.boardMatrix.forEach(row => {
-	 		row.forEach(tile => {
-	 			if (tile.figure !== null){
-	 				tile.figure.figure.hitable = false;
-	 			}
-	 		})
-	 	})
+		this.moveableSprites.forEach(sprite => {
+			sprite.destroy();
+		})
 
-	 	this.moveableSprites.forEach(sprite => {
-	 		sprite.destroy();
-	 	})
+		this.hitmarker.forEach(sprite => {
+			sprite.destroy();
+		})
+	}
 
-	 	this.hitmarker.forEach(sprite => {
-	 		sprite.destroy();
-	 	})
-	 }
+	changePlayerTurn(){
+		this.turn = (this.turn === 1) ? 2 : 1;
+		document.getElementById('turn').innerHTML = "Aktueller Spieler: <b> Spieler " + this.turn + "</b>";
+	}
 
-	 changePlayerTurn(){
-	 	this.turn = (this.turn === 1) ? 2 : 1;
-	 	document.getElementById('turn').innerHTML = "Aktueller Spieler: <b> Spieler " + this.turn + "</b>";
-	 }
+	removeFigure(figure){
+		this.boardMatrix[figure.positionY][figure.positionX].figure.sprite.destroy();
+		this.boardMatrix[figure.positionY][figure.positionX].figure = null;
+		figure.isAlive = false;
+	}
 
-	 removeFigure(figure){
-	 	this.boardMatrix[figure.positionY][figure.positionX].figure.sprite.destroy();
-	 	this.boardMatrix[figure.positionY][figure.positionX].figure = null;
-	 	figure.isAlive = false;
-	 }
-
-	 transparentMarker(){
-	 	this.moveableSprites.forEach(moveableFocus =>{
+	transparentMarker(){
+		this.moveableSprites.forEach(moveableFocus =>{
 			moveableFocus.alpha -= 0.7;
 		})
 		this.hitmarker.forEach(hit =>{
 			hit.alpha -= 0.2;
 		})
-	 }
+	}
 
-	 initFiguresOnMatrix(player){
-	 	Object.values(player.figureList).forEach(type => {
-	 		type.forEach(figure => {
-	 			let tile = this.boardMatrix[figure.positionY][figure.positionX];
-	 			tile.figure = {
-	 				sprite: this.add.sprite(tile.x, tile.y, figure.asset),
-	 				figure: figure
-	 			};
-	 		})
-	 	})
+	initFiguresOnMatrix(player){
+		Object.values(player.figureList).forEach(type => {
+			type.forEach(figure => {
+				let tile = this.boardMatrix[figure.positionY][figure.positionX];
+				tile.figure = {
+					sprite: this.add.sprite(tile.x, tile.y, figure.asset),
+					figure: figure
+				};
+			})
+		})
 	}
 
 	tilesAroundFigure(figure){
@@ -245,6 +253,30 @@ class LocalGame extends Phaser.Scene {
 		}
 		return x;
 	}
+
+	clearThreat(){
+		this.boardMatrix.forEach(row =>{
+			row.forEach(tile =>{
+				tile.threatenedBy = [];
+			})
+		})
+	}
+
+	determineThreat(player){
+		let threatTile = function(tile){
+			if(tile.threatenedBy === null){
+				tile.threatenedBy = new Array();
+			}
+			tile.threatenedBy.push(player.number);
+		}
+		for(let type in player.figureList){
+			for(let figure of player.figureList[type]){
+				let move = figure.determineMovePossibilities();
+				let x = player["apply" + figure.type + "Possibilities"]();
+				x.call(this, figure, move, tile => tile.threatenedBy.push(figure), tile => tile.threatenedBy.push(figure));
+			}
+		}
+	}
 }
 
 
@@ -269,53 +301,47 @@ class Player{
 	applyPeasantPossibilities(){
 		switch(this.number){
 			case 1:
-			return function(figure, moveable) {
+			return function(figure, moveable, actionOne, actionTwo) {
 				for(let i = 1; i <= moveable.y; i++){
 					var tile = this.boardMatrix[figure.positionY - i][figure.positionX];
 					if(tile.figure !== null) break;
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 
 				//Check if peasant can potentially beat an opponents figure
 				if(figure.positionX < 7){
 					tile = this.boardMatrix[figure.positionY - 1][figure.positionX + 1];
-						if(tile.figure !== null && tile.figure.figure.team !== figure.team){
-							tile.figure.figure.hitable = true;
-							this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
-						}
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						actionTwo(tile);
+					}
 				}
 
 				if(figure.positionX > 0){
 					tile = this.boardMatrix[figure.positionY - 1][figure.positionX - 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team){
-						tile.figure.figure.hitable = true;
-						this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						actionTwo(tile);
 					}
 				}
 			}
 			case 2:
-			return function(figure, moveable) {
+			return function(figure, moveable, actionOne, actionTwo) {
 				for(let i = 1; i <= moveable.y; i++){
 					var tile = this.boardMatrix[figure.positionY + i][figure.positionX];
 					if(tile.figure !== null) break;
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 				
 				//Check if peasant can potentially beat an opponents figure
 				if(figure.positionX < 7){
 					tile = this.boardMatrix[figure.positionY + 1][figure.positionX + 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team){
-						tile.figure.figure.hitable = true;
-						this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						actionTwo(tile);
 					}
 				}
 				if(figure.positionX > 0){
 					tile = this.boardMatrix[figure.positionY + 1][figure.positionX - 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team){
-						tile.figure.figure.hitable = true;
-						this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						actionTwo(tile);
 					}
 				}
 			}
@@ -323,54 +349,52 @@ class Player{
 	}
 
 	applyTowerPossibilities(){
-		return function(figure, moveable){
+		return function(figure, moveable, actionOne, actionTwo){
 			let chooseTile = function(direction, i){
 				switch(direction){
 					case 'up':
-						return this.boardMatrix[figure.positionY - i][figure.positionX];
+					return this.boardMatrix[figure.positionY - i][figure.positionX];
 					case 'down':
-						return this.boardMatrix[figure.positionY + i][figure.positionX];
+					return this.boardMatrix[figure.positionY + i][figure.positionX];
 					case 'left':
-						return this.boardMatrix[figure.positionY][figure.positionX - i];
+					return this.boardMatrix[figure.positionY][figure.positionX - i];
 					case 'right':
-						return this.boardMatrix[figure.positionY][figure.positionX + i];
+					return this.boardMatrix[figure.positionY][figure.positionX + i];
 					default:
-						throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
+					throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
 				}
 			}
 			for(let direction in moveable){
 				for(let i = 1; i <= moveable[direction]; i++){
 					let tile = chooseTile.call(this, direction, i);
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team){
-							tile.figure.figure.hitable = true;
-							this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+							actionTwo(tile);
 							break;
 						}
 						else{
 							break;
 						}
 					}
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 			}
 		}
 	}
 	applyRunnerPossibilities(){
-		return function(figure, moveable){
+		return function(figure, moveable, actionOne, actionTwo){
 			let chooseTile = function(direction, i){
 				switch(direction){
 					case 'ne':
-						return this.boardMatrix[figure.positionY - i][figure.positionX + i];
+					return this.boardMatrix[figure.positionY - i][figure.positionX + i];
 					case 'es':
-						return this.boardMatrix[figure.positionY + i][figure.positionX + i];
+					return this.boardMatrix[figure.positionY + i][figure.positionX + i];
 					case 'sw':
-						return this.boardMatrix[figure.positionY + i][figure.positionX - i];
+					return this.boardMatrix[figure.positionY + i][figure.positionX - i];
 					case 'nw':
-						return this.boardMatrix[figure.positionY - i][figure.positionX - i];
+					return this.boardMatrix[figure.positionY - i][figure.positionX - i];
 					default:
-						throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
+					throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
 				}
 			}
 			moveable.forEach(direction =>{
@@ -382,22 +406,20 @@ class Player{
 					catch(err){}
 					if(tile === undefined) break;
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team){
-							tile.figure.figure.hitable = true;
-							this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+							actionTwo(tile);
 							break;
 						}
 						break;
 					}
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 			})
 		}
 	}
 
 	applyJumperPossibilities(){
-		return function(figure, moveable){
+		return function(figure, moveable, actionOne, actionTwo){
 			for(let direction in moveable){
 				for(let tilePosition of moveable[direction]){
 					let tile;
@@ -407,15 +429,13 @@ class Player{
 					catch(err){}
 					if(tile === undefined) continue;
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team){
-							tile.figure.figure.hitable = true;
-							this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+							actionTwo(tile);
 							continue;
 						}
 						continue;
 					}
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 			}
 		}
@@ -427,56 +447,52 @@ class Player{
 			tiles.forEach(tile =>{
 				if(tile.figure !== null){
 					if(tile.figure.figure.team !== figure.team){
-						tile.figure.figure.hitable = true;
-						this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+						arguments[3](tile);
 						return;
 					}
 					return;
 				}
-				tile.moveable = true;
-				this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+				if(tile.threatenedBy.every(threat => threat.team === figure.team)){
+					arguments[2](tile);
+				}
 			})
 		}
 	}
 
 	applyLadyPossibilities(){
-		return function(figure, moveable){
+		return function(figure, moveable, actionOne, actionTwo){
 			let tiles = this.tilesAroundFigure(figure);
 			tiles.forEach(tile =>{
 				if(tile.figure !== null){
-					if(tile.figure.figure.team !== figure.team){
-						tile.figure.figure.hitable = true;
-						this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+					if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						actionTwo(tile);
 						return;
 					}
 					return;
 				}
-				tile.moveable = true;
-				this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+				actionOne(tile);
 			})
 
 			let chooseTile = function(direction, i){
 				switch(direction){
 					case 'up':
-						return this.boardMatrix[figure.positionY - i][figure.positionX];
+					return this.boardMatrix[figure.positionY - i][figure.positionX];
 					case 'down':
-						return this.boardMatrix[figure.positionY + i][figure.positionX];
+					return this.boardMatrix[figure.positionY + i][figure.positionX];
 					case 'left':
-						return this.boardMatrix[figure.positionY][figure.positionX - i];
+					return this.boardMatrix[figure.positionY][figure.positionX - i];
 					case 'right':
-						return this.boardMatrix[figure.positionY][figure.positionX + i];
+					return this.boardMatrix[figure.positionY][figure.positionX + i];
 					default:
-						throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
+					throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
 				}
 			}
-			console.log(moveable.tower);
 			for(let direction in moveable.tower){
 				for(let i = 1; i <= moveable.tower[direction]; i++){
 					let tile = chooseTile.call(this, direction, i);
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team){
-							tile.figure.figure.hitable = true;
-							this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+							actionTwo(tile);
 							break;
 						}
 						else{
@@ -484,23 +500,22 @@ class Player{
 						}
 					}
 					if(tile.moveable) continue;
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 			}
 
 			chooseTile = function(direction, i){
 				switch(direction){
 					case 'ne':
-						return this.boardMatrix[figure.positionY - i][figure.positionX + i];
+					return this.boardMatrix[figure.positionY - i][figure.positionX + i];
 					case 'es':
-						return this.boardMatrix[figure.positionY + i][figure.positionX + i];
+					return this.boardMatrix[figure.positionY + i][figure.positionX + i];
 					case 'sw':
-						return this.boardMatrix[figure.positionY + i][figure.positionX - i];
+					return this.boardMatrix[figure.positionY + i][figure.positionX - i];
 					case 'nw':
-						return this.boardMatrix[figure.positionY - i][figure.positionX - i];
+					return this.boardMatrix[figure.positionY - i][figure.positionX - i];
 					default:
-						throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
+					throw new Error('Couldn\'t locate the tile. ' + direction + 'Iteration: ' + i);
 				}
 			}
 			moveable.runner.directions.forEach(direction =>{
@@ -512,16 +527,14 @@ class Player{
 					catch(err){}
 					if(tile === undefined) break;
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team){
-							tile.figure.figure.hitable = true;
-							this.hitmarker.push(this.add.sprite(tile.x, tile.y, 'hit'));
+						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+							actionTwo(tile);
 							break;
 						}
 						break;
 					}
 					if(tile.moveable) continue;
-					tile.moveable = true;
-					this.moveableSprites.push(this.add.sprite(tile.x, tile.y, 'focus'));
+					actionOne(tile);
 				}
 			})
 		}
