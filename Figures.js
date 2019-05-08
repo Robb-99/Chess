@@ -116,6 +116,7 @@ class King extends Figure{
 	constructor(positionX, positionY, team){
 		super(positionX, positionY, team);
 		this.asset = (this.team === 1) ? 'whiteKing' : 'blackKing';
+		this.threaded = false;
 	}
 	determineMovePossibilities(){
 		return;

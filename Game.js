@@ -3,7 +3,7 @@ const config = {
 	width: 600,
 	height: 600,
 	scene: [LocalGame],
-	parent: "main"
+	parent: "game"
 };
 
 let game = new Phaser.Game(config); 

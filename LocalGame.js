@@ -10,7 +10,7 @@ class LocalGame extends Phaser.Scene {
 		this.load.image('brownTile', 'assets/brownTile.png');
 		this.load.image('focus', 'assets/focus.png');
 		this.load.image('hit', 'assets/hit.png');
-		this.load.image('whitePeasant', 'assets//figures/whitePeasant.png');
+		this.load.image('whitePeasant', 'assets/figures/whitePeasant.png');
 		this.load.image('whiteJumper', 'assets/figures/whiteJumper.png');
 		this.load.image('whiteKing', 'assets/figures/whiteKing.png');
 		this.load.image('whiteLady', 'assets/figures/whiteLady.png');
@@ -74,8 +74,8 @@ class LocalGame extends Phaser.Scene {
 		this.focusedTile = null;
 		this.input.on('pointerdown', event => {
 			let clickedTile = this.getClickedTile(event);
-			//Triggers when the user clicks out of the field
 			console.log(clickedTile);
+			//Triggers when the user clicks out of the field
 			if(clickedTile === "Out of bounds"){
 				this.defocus();
 				return;
@@ -100,6 +100,10 @@ class LocalGame extends Phaser.Scene {
 		})
 	}
 
+	update(){
+		this.animate();
+	}
+
 	getClickedTile(event){
 		if(event.x < BORDER_SIZE + RELATIVE_BORDER_POSITION || event.y < BORDER_SIZE  + RELATIVE_BORDER_POSITION) return "Out of bounds";
 		for(let row of this.boardMatrix){
@@ -115,21 +119,28 @@ class LocalGame extends Phaser.Scene {
 	@param clickedTile: Tile the user wants to move the figure
 	*/
 	move(newTile){
+		let move = this.focusedTile.designation; 
 		let isTransforming = this.focusedTile.figure.figure.move(newTile.indX, newTile.indY);
 		newTile.figure = this.focusedTile.figure;
 		this.focusedTile.figure = null;
-		newTile.figure.sprite.x = this.boardMatrix[newTile.figure.figure.positionY][newTile.figure.figure.positionX].x;
-		newTile.figure.sprite.y = this.boardMatrix[newTile.figure.figure.positionY][newTile.figure.figure.positionX].y;
 		this.defocus();
-
 		if(isTransforming){
 			newTile.figure.figure.transform();
 		}
-		document.getElementById("player" + this.turn).innerHTML += "<li>Moved " + newTile.figure.figure.type + " on field " + newTile.designation;
-		this.clearThreat();
-		this.determineThreat(this.player1);
-		this.determineThreat(this.player2);
+		document.getElementById("moveList").innerHTML += "<li>Player\n" + this.turn + ":\n" + newTile.figure.figure.type + " " + move + "→" + newTile.designation + "</li>";
 		this.changePlayerTurn();
+	}
+	animate(){
+		this.boardMatrix.forEach(row =>{
+			row.forEach(tile =>{
+				if(tile.figure !== null){
+					if(tile.x > tile.figure.sprite.x) tile.figure.sprite.x += TILE_SIZE / 20;
+					if(tile.x < tile.figure.sprite.x) tile.figure.sprite.x -= TILE_SIZE / 20;
+					if(tile.y > tile.figure.sprite.y) tile.figure.sprite.y += TILE_SIZE / 20;
+					if(tile.y < tile.figure.sprite.y) tile.figure.sprite.y -= TILE_SIZE / 20;
+				}
+			})
+		})
 	}
 
 	focusFigure(clickedTile){
@@ -186,8 +197,13 @@ class LocalGame extends Phaser.Scene {
 	}
 
 	changePlayerTurn(){
+		this.clearThreat();
+		this.determineThreat(this.player1);
+		this.determineThreat(this.player2);
 		this.turn = (this.turn === 1) ? 2 : 1;
 		document.getElementById('turn').innerHTML = "Aktueller Spieler: <b> Spieler " + this.turn + "</b>";
+		if(this.checkKingsStatus(this.player1)) console.log("Spieler 1 steht im Schach");
+		if(this.checkKingsStatus(this.player2)) console.log("Spieler 2 steht im Schach");
 	}
 
 	removeFigure(figure){
@@ -263,19 +279,20 @@ class LocalGame extends Phaser.Scene {
 	}
 
 	determineThreat(player){
-		let threatTile = function(tile){
-			if(tile.threatenedBy === null){
-				tile.threatenedBy = new Array();
-			}
-			tile.threatenedBy.push(player.number);
-		}
 		for(let type in player.figureList){
 			for(let figure of player.figureList[type]){
 				let move = figure.determineMovePossibilities();
 				let x = player["apply" + figure.type + "Possibilities"]();
-				x.call(this, figure, move, tile => tile.threatenedBy.push(figure), tile => tile.threatenedBy.push(figure));
+				x.call(this, figure, move, (tile, x) => { if(figure.isAlive){tile.threatenedBy.push(figure)}}, (tile, x) =>  { if(figure.isAlive){tile.threatenedBy.push(figure)}});
 			}
 		}
+	}
+	checkKingsStatus(player){
+		let tile = this.boardMatrix[player.figureList.King[0].positionY][player.figureList.King[0].positionX];
+		for(let threat of tile.threatenedBy){
+			if(player.number !== threat.team) return true;
+		}
+		return false;
 	}
 }
 
@@ -311,14 +328,14 @@ class Player{
 				//Check if peasant can potentially beat an opponents figure
 				if(figure.positionX < 7){
 					tile = this.boardMatrix[figure.positionY - 1][figure.positionX + 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 						actionTwo(tile);
 					}
 				}
 
 				if(figure.positionX > 0){
 					tile = this.boardMatrix[figure.positionY - 1][figure.positionX - 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 						actionTwo(tile);
 					}
 				}
@@ -334,13 +351,13 @@ class Player{
 				//Check if peasant can potentially beat an opponents figure
 				if(figure.positionX < 7){
 					tile = this.boardMatrix[figure.positionY + 1][figure.positionX + 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 						actionTwo(tile);
 					}
 				}
 				if(figure.positionX > 0){
 					tile = this.boardMatrix[figure.positionY + 1][figure.positionX - 1];
-					if(tile.figure !== null && tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+					if(tile.figure !== null && tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 						actionTwo(tile);
 					}
 				}
@@ -368,7 +385,7 @@ class Player{
 				for(let i = 1; i <= moveable[direction]; i++){
 					let tile = chooseTile.call(this, direction, i);
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						if(tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 							actionTwo(tile);
 							break;
 						}
@@ -406,7 +423,7 @@ class Player{
 					catch(err){}
 					if(tile === undefined) break;
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						if(tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 							actionTwo(tile);
 							break;
 						}
@@ -429,7 +446,7 @@ class Player{
 					catch(err){}
 					if(tile === undefined) continue;
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						if(tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 							actionTwo(tile);
 							continue;
 						}
@@ -464,7 +481,7 @@ class Player{
 			let tiles = this.tilesAroundFigure(figure);
 			tiles.forEach(tile =>{
 				if(tile.figure !== null){
-					if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+					if(tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 						actionTwo(tile);
 						return;
 					}
@@ -491,7 +508,7 @@ class Player{
 				for(let i = 1; i <= moveable.tower[direction]; i++){
 					let tile = chooseTile.call(this, direction, i);
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						if(tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 2)){
 							actionTwo(tile);
 							break;
 						}
@@ -527,7 +544,7 @@ class Player{
 					catch(err){}
 					if(tile === undefined) break;
 					if(tile.figure !== null){
-						if(tile.figure.figure.team !== figure.team && tile.figure.figure.type !== "King"){
+						if(tile.figure.figure.team !== figure.team && (tile.figure.figure.type !== "King" || actionTwo.length === 1)){
 							actionTwo(tile);
 							break;
 						}

@@ -9,9 +9,15 @@
 	<script src="Game.js"></script>
 </head>
 <body>
-	<p id="turn">.</p>
-	<span id="main"></span>
-	<p id="focus"></p>
-	<p id="lastTurn"></p>
+	<div class="centered">
+		<div class="gamebox">
+			<p id="turn">.</p>
+			<div id="game"></div>
+		</div>
+		<div class="gameProgress">
+			<h2>Moves</h2>
+			<ul id="moveList"></ul>
+		</div>
+	</div>
 </body>
 </html>
