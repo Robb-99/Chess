@@ -25,6 +25,6 @@ const TILE_SIZE = 50;
 const BORDER_SIZE = 100;
 /*
  * Just used, if BORDER_SIZE and TILE_SIZE does not match the width/height of the config.
- * The Tile Matrix will be placed relative, ensure the functionality
+ * The Tile Matrix will be placed relative, ensuring the functionality
 */
 const RELATIVE_BORDER_POSITION = (config.width - (BORDER_SIZE * 2 + TILE_SIZE * 8)) / 2; //Relative to the resolution
